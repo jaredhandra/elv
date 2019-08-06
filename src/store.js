@@ -14,13 +14,15 @@ export default new Vuex.Store({
       name: '',
       images: [],
       href: '',
-      description: ''
+      description: '',
+      count: 0,
+      offsetCount: 0,
+      totalCount: 0
     },
     tracks: []
   },
   mutations: {
     setSpotifyLogin (state, payload) {
-      debugger
       state.spotifyLogin = payload
     },
     setUserInfo (state, payload) {
@@ -32,7 +34,13 @@ export default new Vuex.Store({
       state.playlistInfo.name = payload.name
       state.playlistInfo.images = payload.images
       state.playlistInfo.href = payload.href
-      state.description = payload.description
+      state.playlistInfo.description = payload.description
+      state.playlistInfo.count = payload.count
+    },
+    setTracks (state, payload) {
+      payload.forEach((track) => {
+        state.tracks.push(track)
+      })
     }
   },
   actions: {
@@ -42,6 +50,7 @@ export default new Vuex.Store({
           const token = response.data.done.json.access_token
           if (token) {
             commit('setSpotifyLogin', token)
+            this.dispatch('getUserInfo', token)
           }
         })
         .catch((response) => {
@@ -49,10 +58,9 @@ export default new Vuex.Store({
         })
     },
     getUserInfo ({ commit, state }) {
-      debugger
       const config = {
         headers: {
-          Authorization: `Basic ${state.spotifyLogin}`
+          Authorization: `Bearer ${state.spotifyLogin}`
         }
       }
       axios.get('https://api.spotify.com/v1/users/jaredhandra', config)
@@ -63,15 +71,13 @@ export default new Vuex.Store({
             profile: response.data.href
           }
           commit('setUserInfo', userInfo)
-          debugger
-          // this.dispatch('getPlaylistInfo', state.spotifyLogin)
+          this.dispatch('getPlaylistInfo', state.spotifyLogin)
         })
     },
-    getPlaylistInfo ({ commit, state }, payload) {
-      console.log(state.spotifyLogin)
+    getPlaylistInfo ({ commit }, payload) {
       const playlistConfig = {
         headers: {
-          Authorization: `Bearer${payload}`
+          Authorization: `Bearer ${payload}`
         }
       }
       axios.get('https://api.spotify.com/v1/playlists/2pXKzmzb91RdzsISETs8jv', playlistConfig)
@@ -80,10 +86,33 @@ export default new Vuex.Store({
             name: response.data.name,
             images: response.data.images,
             href: response.data.href,
-            description: response.data.description
+            description: response.data.description,
+            count: response.data.tracks.total
           }
           commit('setPlaylistInfo', payload)
+          this.dispatch('getPlaylistTracks')
+        })
+    },
+    getPlaylistTracks ({ commit, state }) {
+      const playlistConfig = {
+        headers: {
+          Authorization: `Bearer ${state.spotifyLogin}`
+        },
+        params: {
+          limit: 100,
+          offset: state.playlistInfo.offsetCount
+        }
+      }
+      axios.get('https://api.spotify.com/v1/playlists/2pXKzmzb91RdzsISETs8jv/tracks', playlistConfig)
+        .then((response) => {
+          commit('setTracks', response.data.items)
+          if (state.playlistInfo.totalCount < state.playlistInfo.count) {
+            state.playlistInfo.totalCount += 100
+            state.playlistInfo.offsetCount += 100
+            this.dispatch('getPlaylistTracks')
+          }
         })
     }
+
   }
 })

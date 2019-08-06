@@ -1,7 +1,14 @@
 <template>
   <div id="main">
-    <h1>Elvis</h1>
-    <h3> {{ name }} </h3>
+    <h2 :href="profileUrl">
+      {{ name }}'s <b>{{ playlistName }}</b> playlist
+    </h2>
+    <h5>
+      {{ playlistDescription }}
+    </h5>
+    <h5>
+      {{ playlistCount }} total songs
+    </h5>
   </div>
 </template>
 
@@ -11,11 +18,14 @@ import { mapActions, mapState } from 'vuex'
 export default {
   name: 'Main',
   computed: mapState({
-    name: state => state.displayName
+    name: state => state.displayName,
+    profileUrl: state => state.profileUrl,
+    playlistName: state => state.playlistInfo.name,
+    playlistDescription: state => state.playlistInfo.description,
+    playlistCount: state => state.tracks.length
   }),
   created () {
     this.spotifyLogin()
-    this.getUserInfo()
   },
   methods: {
     ...mapActions(['spotifyLogin', 'getUserInfo', 'getPlaylistInfo'])
